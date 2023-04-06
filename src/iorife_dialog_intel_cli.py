@@ -160,7 +160,7 @@ def do_dialog_intel_inference():
 if __name__ == "__main__":
 
     if len(sys.argv) < 2:
-        print("Usage: iorife_silero_vad [path-to-audio-file]\n")
+        print("Usage: iorife_dialog_intel_cli.py [path-to-audio-file]\n")
         exit()
 
     asset_path = sys.argv[1]
