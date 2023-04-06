@@ -23,12 +23,12 @@ import utils
 random.seed(999)
 
 
-def BLSTM_CNN_with_ATT_cross_domain():
+def BLSTM_CNN_with_ATT_VoiceMOS():
     input_size = (None, 1)
     _input = Input(shape=(None, 257))
     _input_end2end = Input(shape=(None, 1))
 
-    SincNet_ = Sinc_Conv_Layer(input_size, N_filt=257, Filt_dim=251, fs=16000, NAME="SincNet_1").compute_output(
+    SincNet_ = Sinc_Conv_Layer(input_size, N_filt=257, Filt_dim=251, fs=16000, NAME="SincNet_2").compute_output(
         _input_end2end)
     merge_input = concatenate([_input, SincNet_], axis=1)
     re_input = keras.layers.core.Reshape((-1, 257, 1), input_shape=(-1, 257))(merge_input)
@@ -76,7 +76,7 @@ def BLSTM_CNN_with_ATT_cross_domain():
 def voicemos_inference(utterance_list, utterance_hubert_feat_list):
     print("\n[Dialog Intel] loading the VoiceMOS MOSA-Net model ...")
 
-    model_test = BLSTM_CNN_with_ATT_cross_domain()
+    model_test = BLSTM_CNN_with_ATT_VoiceMOS()
     model_test.load_weights('../pretrained_models/MOSA-Net_Cross_Domain_epoch_100.h5')
 
     print("\n[Dialog Intel] evaluating utterance list ...")
