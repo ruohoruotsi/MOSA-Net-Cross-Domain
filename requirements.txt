@@ -8,6 +8,7 @@ resampy==0.2.2
 tensorflow==1.13.1
 numpy==1.19.5
 protobuf==3.20.*
+matplotlib
 
 # hubert deps on python: 3.7
 torch==1.10.2

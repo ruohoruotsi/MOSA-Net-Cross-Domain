@@ -3,8 +3,8 @@ Author: iroro
 """
 
 import os
-
 import warnings
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import keras
@@ -16,49 +16,11 @@ from keras.layers.pooling import GlobalAveragePooling1D, AveragePooling1D
 from keras.layers import TimeDistributed, Bidirectional, Input, LSTM
 from keras_self_attention import SeqSelfAttention
 from SincNet import Sinc_Conv_Layer
-import scipy.io
-import scipy.stats
-import librosa
 import numpy as np
 import random
+import utils
 
 random.seed(999)
-
-epoch = 100
-batch_size = 1
-
-
-# Please follow the following format to make the input list
-# PESQ score, STOI score, SDI score, filepath directory
-def input_list_read(filelist):
-    f = open(filelist, 'r')
-    Path = []
-    for line in f:
-        Path = Path + [line[0:-1]]
-    return Path
-
-
-def spectrogram_and_phase(path):
-    audio_data, _ = librosa.load(path, sr=16000, mono=True)
-    if np.max(abs(audio_data)) != 0:
-        audio_data = audio_data / np.max(abs(audio_data))
-
-    F = librosa.stft(audio_data, n_fft=512, hop_length=256, win_length=512, window=scipy.signal.hamming)
-    Lp = np.abs(F)  # magnitude spectrogram
-    NLp = Lp
-    NLp = np.reshape(NLp.T, (1, NLp.shape[1], 257))
-    end2end = np.reshape(audio_data, (1, audio_data.shape[0], 1))
-    return NLp, end2end
-
-
-def norm_data(input_x):
-    input_x = (input_x - 0) / (5 - 0)
-    return input_x
-
-
-def denorm(input_x):
-    input_x = input_x * (5 - 0) + 0
-    return input_x
 
 
 def BLSTM_CNN_with_ATT_cross_domain():
@@ -111,46 +73,47 @@ def BLSTM_CNN_with_ATT_cross_domain():
     return model
 
 
-def mosa_inference(Test_List, Test_List_Hubert_feat):
-    print("[Dialog Intel] loading MOSA-Net model ...")
+def voicemos_inference(utterance_list, utterance_hubert_feat_list):
+    print("\n[Dialog Intel] loading the VoiceMOS MOSA-Net model ...")
 
     model_test = BLSTM_CNN_with_ATT_cross_domain()
     model_test.load_weights('../pretrained_models/MOSA-Net_Cross_Domain_epoch_100.h5')
 
-    print("[Dialog Intel] evaluating utterance list ...")
-    mos_predict = np.zeros([len(Test_List), ])
+    print("\n[Dialog Intel] evaluating utterance list ...")
+    mos_predict = np.zeros([len(utterance_list), ])
     data_path = '../data/wav/'
-    list_predicted_mos_score = []
 
-    utterances_list = list(set([os.path.splitext(item)[0] for item in Test_List]))
+    utterances_list = list(set([os.path.splitext(item)[0] for item in utterance_list]))
     mos_predict_utterances = {system: [] for system in utterances_list}
 
-    for i in range(len(Test_List)):
-        asessment_filepath = Test_List[i].split(',')
-        hubert_filepath = Test_List_Hubert_feat[i].split(',')
+    for i in range(len(utterance_list)):
+        asessment_filepath = utterance_list[i].split(',')
+        hubert_filepath = utterance_hubert_feat_list[i].split(',')
         wav_name = asessment_filepath[0]
 
         complete_path = data_path + wav_name
-        noisy_spectrogram, noisy_waveform = spectrogram_and_phase(complete_path)
+        noisy_spectrogram, noisy_waveform = utils.spectrogram_and_phase(complete_path)
         noisy_hubert = np.load(hubert_filepath[1])  # hubert load extracted features
 
         [voice_mos_score, frame_mos] = model_test.predict([noisy_spectrogram, noisy_waveform, noisy_hubert],
-                                                verbose=0, batch_size=batch_size)
+                                                          verbose=0, batch_size=1)
 
-        denorm_mos_predict = denorm(voice_mos_score)
+        denorm_mos_predict = utils.denorm(voice_mos_score)
         mos_predict[i] = denorm_mos_predict
         system_names = os.path.splitext(wav_name)[0]
         mos_predict_utterances[system_names].append(denorm_mos_predict[0])
 
         estimated_score = denorm_mos_predict[0]
         info = asessment_filepath[0] + ', VoiceMOS: ' + str(estimated_score[0])
-        print("{} info: {}   spectrogram shape: {}  waveform shape: {}  hubert feature shape: {}   frame_mos shape: {}".
-              format(i, info, noisy_spectrogram.shape, noisy_waveform.shape, noisy_hubert.shape, frame_mos.shape))
+        print(
+            "[{}] info: {}   spectrogram shape: {}  waveform shape: {}  hubert feature shape: {}   frame_mos shape: {}".
+            format(i, info, noisy_spectrogram.shape, noisy_waveform.shape, noisy_hubert.shape, frame_mos.shape))
 
-# hubert model: hubert_large_ll60k.pt' downloaded from
+
+# hubert model: hubert_large_ll60k.pt downloaded from
 # https://github.com/facebookresearch/fairseq/tree/main/examples/hubert
 
 
 if __name__ == '__main__':
-    mosa_inference(input_list_read('../data/io_test_list.txt'),
-                   input_list_read('../data/List_Npy_Val_hubert_MOS_Challenge_phase1_main.txt'))
+    voicemos_inference(utils.input_list_read('../data/io_test_list.txt'),
+                       utils.input_list_read('../data/List_Npy_Val_hubert_MOS_Challenge_phase1_main.txt'))
