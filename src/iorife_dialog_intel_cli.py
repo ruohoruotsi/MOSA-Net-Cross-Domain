@@ -101,10 +101,12 @@ def do_dialog_intel_inference():
     print("\n[Dialog Intel] loading the VoiceMOS MOSA-Net model ...")
     voicemos_model = io_mosanet.BLSTM_CNN_with_ATT_VoiceMOS()
     voicemos_model.load_weights('../pretrained_models/MOSA-Net_Cross_Domain_epoch_100.h5')
+    print(voicemos_model.summary())
 
     print("\n[Dialog Intel] loading the {PESQ, SDI, STOI} MOSA-Net model ...")
     crossdomain_model = io_mosanet_cross_domain.BLSTM_CNN_with_ATT_cross_domain()
     crossdomain_model.load_weights('../pretrained_models/MOSA_Net_Cross_Domain_Multi_Target.h5')
+    print(crossdomain_model.summary())
 
     print("\n[Dialog Intel] loading the Hubert SSL model ...")
     cp_path = '../pretrained_models/hubert_large_ll60k.pt'
